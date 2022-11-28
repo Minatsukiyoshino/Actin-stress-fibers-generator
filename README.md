@@ -1,4 +1,4 @@
-# Actin-stress-fibers-generator-
+# Actin-stress-fibers-generator
 ## A Graphic card with at least 8GB VRAM is recommended.
 ## Environment:
       with Python 3.9 and CUDA 11.7:
