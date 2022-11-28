@@ -7,5 +7,5 @@
 ## unzip 'validation/example/example.7z' could acquire validation data.
     Please unzip the items to the folder 'validation/example/'
     
-## unzip 'model/generator.7z.001~generator.7z.022' could acquire pre-trained weight of the network.
+## unzip 'model/generator.7z.001~generator.7z.022' could acquire pre-trained weight for the network.
     Please unzip the items to the folder 'model/'
