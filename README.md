@@ -12,3 +12,6 @@
  
 ## Usage:
     run 'run_SFs_generator.py'
+    
+## Dataset for training
+   Unzip file 'dataset.7z'
