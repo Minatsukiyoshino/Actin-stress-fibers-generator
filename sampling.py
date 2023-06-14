@@ -48,21 +48,16 @@ def sigmoid_beta_schedule(timesteps):
 
 
 timesteps = params.timesteps
-
-# 定义方差schedule
 betas = cosine_beta_schedule(timesteps=timesteps)
 
-# define alphas
 alphas = 1. - betas
 alphas_cumprod = torch.cumprod(alphas, axis=0)
 alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
 sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
 
-# calculations for diffusion q(x_t | x_{t-1}) and others
 sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
 sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
 
-# calculations for posterior q(x_{t-1} | x_t, x_0)
 posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
 
 
@@ -74,8 +69,6 @@ def p_sample(model, x, c, t, t_index):
     )
     sqrt_recip_alphas_t = extract(sqrt_recip_alphas, t, x.shape)
 
-    # Equation 11 in the paper
-    # Use our model (noise predictor) to predict the mean
     model_mean = sqrt_recip_alphas_t * (
             x - betas_t * model(x, t, c) / sqrt_one_minus_alphas_cumprod_t
     )
@@ -85,10 +78,7 @@ def p_sample(model, x, c, t, t_index):
     else:
         posterior_variance_t = extract(posterior_variance, t, x.shape)
         noise = torch.randn_like(x)
-        # Algorithm 2 line 4:
         return model_mean + torch.sqrt(posterior_variance_t) * noise
-
-    # Algorithm 2 (including returning all images)
 
 
 @torch.no_grad()
@@ -96,7 +86,6 @@ def p_sample_loop(model, c, shape):
     device = next(model.parameters()).device
 
     b = shape[0]
-    # start from pure noise (for each example in the batch)
     img = torch.randn(shape, device=device)
     imgs = []
 
@@ -122,7 +111,6 @@ def ddim_sample(
         ddim_discr_method="uniform",
         ddim_eta=0.0,
         clip_denoised=True):
-    # make ddim timestep sequence
     if ddim_discr_method == 'uniform':
         c = params.timesteps // ddim_timesteps
         ddim_timestep_seq = np.asarray(list(range(0, params.timesteps,c)))
@@ -132,39 +120,27 @@ def ddim_sample(
         ).astype(int)
     else:
         raise NotImplementedError(f'There is no ddim discretization method called "{ddim_discr_method}"')
-    # add one to get the final alpha values right (the ones from first scale to data during sampling)
     ddim_timestep_seq = ddim_timestep_seq + 1
-    # previous sequence
     ddim_timestep_prev_seq = np.append(np.array([0]), ddim_timestep_seq[:-1])
 
     device = next(model.parameters()).device
-    # start from pure noise (for each example in the batch)
     sample_img = torch.randn((batch_size, channels, image_size, image_size), device=device)
     for i in tqdm(reversed(range(0, ddim_timesteps)), desc='sampling loop time step', total=ddim_timesteps):
         t = torch.full((batch_size,), ddim_timestep_seq[i], device=device, dtype=torch.long)
         prev_t = torch.full((batch_size,), ddim_timestep_prev_seq[i], device=device, dtype=torch.long)
 
-        # 1. get current and previous alpha_cumprod
         alpha_cumprod_t = extract(alphas_cumprod, t, sample_img.shape)
         alpha_cumprod_t_prev = extract(alphas_cumprod, prev_t, sample_img.shape)
-
-        # 2. predict noise using model
+        
         pred_noise = model(sample_img, t, condition)
-
-        # 3. get the predicted x_0
         pred_x0 = (sample_img - torch.sqrt((1. - alpha_cumprod_t)) * pred_noise) / torch.sqrt(alpha_cumprod_t)
         if clip_denoised:
             pred_x0 = torch.clamp(pred_x0, min=-1., max=1.)
-
-        # 4. compute variance: "sigma_t(η)" -> see formula (16)
-        # σ_t = sqrt((1 − α_t−1)/(1 − α_t)) * sqrt(1 − α_t/α_t−1)
         sigmas_t = ddim_eta * torch.sqrt(
             (1 - alpha_cumprod_t_prev) / (1 - alpha_cumprod_t) * (1 - alpha_cumprod_t / alpha_cumprod_t_prev))
 
-        # 5. compute "direction pointing to x_t" of formula (12)
         pred_dir_xt = torch.sqrt(1 - alpha_cumprod_t_prev - sigmas_t ** 2) * pred_noise
 
-        # 6. compute x_{t-1} of formula (12)
         x_prev = torch.sqrt(alpha_cumprod_t_prev) * pred_x0 + pred_dir_xt + sigmas_t * torch.randn_like(sample_img)
 
         sample_img = x_prev
