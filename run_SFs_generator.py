@@ -48,6 +48,7 @@ def main():
 
     model.to(device)
     model.load_state_dict(torch.load(model_dir + 'generator.pkl'))
+    model.eval()
 
     for i, (condition, target) in enumerate(test_data_loader):
         condition = Variable(condition.to(device))
