@@ -12,6 +12,8 @@
  
 ## Usage:
     run 'run_SFs_generator.py'
+    change average_num to 1 if you do not need the average distribution of stress fibers
+    allowing for modify your ownn colormap in visualizing stress fibers
     
 ## Dataset for training
     Unzip file 'dataset.7z'
